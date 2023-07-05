@@ -32,6 +32,7 @@ class Pixman(Tarball, Meson):
             lastversion_even=True,
             archive_url="http://cairographics.org/releases/pixman-{version}.tar.gz",
             hash="ea1480efada2fd948bc75366f7c349e1c96d3297d09a3fe62626e38e234a625e",
+            dependencies=["ninja", "meson"],
         )
 
     def build(self):
