@@ -56,11 +56,7 @@ jobs:
           Move-Item "C:\Program Files\Git\notbin" "C:\Program Files\Git\bin"
       - name: Create zip file
         run: |
-          try {
-            7z a build.zip C:/gtk-build/build
-          } catch {
-            Write-Host "Just ignoring errors for now"
-          }
+          7z a build.zip C:/gtk-build/build || Write-Host "Just ignoring errors for now"
       - name: Upload build folder
         uses: actions/upload-artifact@v3
         with:
