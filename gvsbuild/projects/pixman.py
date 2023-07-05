@@ -22,7 +22,7 @@ from gvsbuild.utils.base_project import Project, project_add
 
 
 @project_add
-class Pixman(Tarball, Project):
+class Pixman(Tarball, Meson):
     def __init__(self):
         Project.__init__(
             self,
@@ -38,7 +38,7 @@ class Pixman(Tarball, Project):
         enable_mmx = "off" if self.builder.x64 else "on"
         Meson.build(
             self,
-            meson_params=f"-Dsse2=on -Dssse3=on -Dmmx={enable_mmx} -Dgtk=off -Dlibpng=off -Dtests=off -Ddemo=off",
+            meson_params=f"-Dsse2=on -Dssse3=on -Dmmx={enable_mmx} -Dtests=off -Ddemo=off",
         )
 
         self.install(r".\COPYING share\doc\pixman")
