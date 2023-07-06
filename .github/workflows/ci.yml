@@ -15,7 +15,7 @@ jobs:
   build:
     name: Build GTK Binaries
     runs-on: windows-latest
-    timeout-minutes: 75
+    timeout-minutes: 100
     if: "!contains(github.event.head_commit.message, 'skip ci')"
 
     steps:
@@ -48,7 +48,7 @@ jobs:
       - name: Build GTK4
         run:
           > # Use -j2 option to prevent out of memory errors with GitHub Action runners
-          poetry run gvsbuild build --ninja-opts -j2 librsvg cairo gtk4 libadwaita
+          poetry run gvsbuild build --ninja-opts -j3 librsvg cairo gtk4 libadwaita
           gtksourceview5 gobject-introspection adwaita-icon-theme hicolor-icon-theme gst-plugins-good
       - name: Restore git binary
         run: |
@@ -57,7 +57,7 @@ jobs:
       - name: Create zip file
         continue-on-error: true
         run: |
-          7z a build.zip C:/gtk-build/build || Write-Host "Just ignoring errors for now"
+          7z a build.zip C:/gtk-build/gtk || Write-Host "Just ignoring errors for now"
       - name: Upload build folder
         uses: actions/upload-artifact@v3
         with:
