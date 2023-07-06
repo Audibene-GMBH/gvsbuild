@@ -48,7 +48,7 @@ jobs:
       - name: Build GTK4
         run:
           > # Use -j2 option to prevent out of memory errors with GitHub Action runners
-          poetry run gvsbuild build --ninja-opts -j2 librsvg gtk gst-plugins-good
+          poetry run gvsbuild build --ninja-opts -j2 librsvg gtk4 gst-plugins-good
       - name: Restore git binary
         run: |
           Move-Item "C:\Program Files\Git\usr\notbin" "C:\Program Files\Git\usr\bin"
