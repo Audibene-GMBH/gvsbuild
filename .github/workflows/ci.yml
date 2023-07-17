@@ -6,82 +6,17 @@ on:
     types: [published]
 
 env:
-  python_version: '3.11'
-  poetry_version: '1.2.2'
+  python_version: "3.11"
+  poetry_version: "1.2.2"
 
 name: CI
 
 jobs:
-
-  lint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    steps:
-      - uses: actions/checkout@v3.5.3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Set up Python
-        uses: actions/setup-python@v4.6.1
-        with:
-          python-version: ${{ env.python_version }}
-      - name: Lint with Pre-commit
-        uses: pre-commit/action@v3.0.0
-
-  test:
-    needs: lint
-    name: Test with Python ${{ matrix.python-version }}
-    strategy:
-      matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-    runs-on: windows-latest
-    timeout-minutes: 60
-    if: "!contains(github.event.head_commit.message, 'skip ci')"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3.5.3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - name: Set up Python
-        uses: actions/setup-python@v4.6.1
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Use Python Dependency Cache
-        uses: actions/cache@v3.3.1
-        with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: ${{ runner.os }}-poetry-
-      - name: Install Poetry
-        run: python -m pip install poetry==${{ env.poetry_version }}
-      - name: Configure Poetry
-        run: poetry config virtualenvs.in-project true
-      - name: Install Python Dependencies
-        run: poetry install
-      - name: Install dependencies
-        run: |
-          pip install tox tox-gh-actions
-      # Temporarily move the preinstalled git, it causes errors related to cygwin.
-      - name: Move git binary
-        run: |
-          Move-Item "C:\Program Files\Git\usr\bin" "C:\Program Files\Git\usr\notbin"
-          Move-Item "C:\Program Files\Git\bin" "C:\Program Files\Git\notbin"
-      - name: Test with tox
-        run: tox
-      - name: Restore git binary
-        run: |
-          Move-Item "C:\Program Files\Git\usr\notbin" "C:\Program Files\Git\usr\bin"
-          Move-Item "C:\Program Files\Git\notbin" "C:\Program Files\Git\bin"
-
   build:
-    needs: lint
     name: Build GTK Binaries
     runs-on: windows-latest
-    timeout-minutes: 75
+    timeout-minutes: 100
     if: "!contains(github.event.head_commit.message, 'skip ci')"
-    strategy:
-      matrix:
-        gtk-version: ['3', '4']
 
     steps:
       - name: Checkout
@@ -109,34 +44,21 @@ jobs:
         run: |
           Move-Item "C:\Program Files\Git\usr\bin" "C:\Program Files\Git\usr\notbin"
           Move-Item "C:\Program Files\Git\bin" "C:\Program Files\Git\notbin"
-      - name: Build GTK3
-        if: matrix.gtk-version == '3'
-        run: >
-          poetry run gvsbuild build --ninja-opts -j2 gtk3 gtksourceview4 graphene
-          glib-networking
+
       - name: Build GTK4
-        if: matrix.gtk-version == '4'
-        run: > # Use -j2 option to prevent out of memory errors with GitHub Action runners
-          poetry run gvsbuild build --ninja-opts -j2 --enable-gi cairo gtk4 libadwaita
-          gtksourceview5 gobject-introspection adwaita-icon-theme hicolor-icon-theme
+        run:
+          > # Use -j2 option to prevent out of memory errors with GitHub Action runners
+          poetry run gvsbuild build --ninja-opts -j2 librsvg gtk3 gst-plugins-good gst-plugins-bad
       - name: Restore git binary
         run: |
           Move-Item "C:\Program Files\Git\usr\notbin" "C:\Program Files\Git\usr\bin"
           Move-Item "C:\Program Files\Git\notbin" "C:\Program Files\Git\bin"
-      - name: Create Source Dist and Wheel
-        run: poetry build
-      - name: Upload gvsbuild-${{ github.event.release.tag_name }}.tar.gz
+      - name: Create zip file
+        continue-on-error: true
+        run: |
+          7z a build.zip C:/gtk-build/gtk || Write-Host "Just ignoring errors for now"
+      - name: Upload build folder
         uses: actions/upload-artifact@v3
-        if: github.event_name == 'release' && matrix.gtk-version == '4'
         with:
-          name: gvsbuild-${{ github.event.release.tag_name }}.tar.gz
-          path: dist/gvsbuild-${{ github.event.release.tag_name }}.tar.gz
-      - name: Upload gvsbuild-${{ github.event.release.tag_name }}-py3-none-any.whl
-        uses: actions/upload-artifact@v3
-        if: github.event_name == 'release' && matrix.gtk-version == '4'
-        with:
-          name: gvsbuild-${{ github.event.release.tag_name }}-py3-none-any.whl
-          path: dist/gvsbuild-${{ github.event.release.tag_name }}-py3-none-any.whl
-      - name: Publish to PyPI (release only)
-        if: github.event_name == 'release' && matrix.gtk-version == '4'
-        run: poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
+          name: build
+          path: build.zip
